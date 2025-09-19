@@ -1,5 +1,6 @@
 // src/scene/Canvas3D_Level2.jsx
 import React, { useRef, useEffect, useState } from "react";
+import ScoreBadge from "../ui/ScoreBadge";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
@@ -393,11 +394,8 @@ export default function Canvas3D_Level2() {
   return (
     <>
       <div ref={mountRef} style={{ width: "100vw", height: "100vh" }} />
-      <div style={{ position: "absolute", top: 10, left: 10, padding: "5px 10px", backgroundColor: "rgba(255,255,255,0.7)", fontFamily: "sans-serif" }}>
-        <div>Strokes: {strokes}</div>
-        <div>Par: {par}</div>
-        {holeDone && <div style={{ color: "green" }}>Hole Completed! 🎉</div>}
-      </div>
+      <ScoreBadge hole={2} par={par} strokes={strokes} />
+      {holeDone && <div className="hole-done-msg">Hole Completed! 🎉</div>}
     </>
   );
 }
