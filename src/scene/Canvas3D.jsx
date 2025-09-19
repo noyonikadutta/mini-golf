@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ScoreBadge from "../ui/ScoreBadge";
+import EndOfLevelModal from "../ui/EndofLevelModal";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
@@ -10,6 +12,7 @@ const COURSE_SIZE_Z = 20;
 const AIM_RADIUS = 1.2; // radius where aiming takes precedence
 
 export default function Canvas3D() {
+  const navigate = useNavigate();
   const mountRef = useRef(null);
   const ballRef = useRef(null);
   const holeRef = useRef(null);
@@ -33,6 +36,16 @@ export default function Canvas3D() {
   const [strokes, setStrokes] = useState(0);
   const [par] = useState(3);
   const [holeDone, setHoleDone] = useState(false);
+
+  const onRetry = () => {
+    // Reload the same level cleanly
+    window.location.reload();
+  };
+  const onNext = () => {
+    // Current level 1 -> go to level 2
+    navigate("/game/2");
+  };
+  const onMainMenu = () => navigate("/menu");
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -449,6 +462,14 @@ export default function Canvas3D() {
       <div ref={mountRef} style={{ width: "100vw", height: "100vh" }} />
       <ScoreBadge hole={1} par={par} strokes={strokes} />
       {holeDone && <div className="hole-done-msg">Hole Completed! 🎉</div>}
+      {holeDone && (
+        <EndOfLevelModal
+          strokes={strokes}
+          onNext={onNext}
+          onRetry={onRetry}
+          onMainMenu={onMainMenu}
+        />
+      )}
     </>
   );
 }
