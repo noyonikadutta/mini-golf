@@ -17,6 +17,7 @@ export default function Canvas3D_Level3() {
   const confettiPoolRef = useRef([]);
   const velocityRef = useRef(new THREE.Vector3(0, 0, 0));
   const holeTriggeredRef = useRef(false);
+  const sinkingRef = useRef({ active: false });
   // Aiming
   const isAimingRef = useRef(false);
   const dragStartRef = useRef(new THREE.Vector3());
@@ -311,32 +312,50 @@ export default function Canvas3D_Level3() {
         const waterZ1 = -waterDepth / 2;
         const waterZ2 = waterDepth / 2;
 
-        // Water flow stronger than ball velocity
-        if (b.z > waterZ1 && b.z < waterZ2) {
-          velocityRef.current.x = Math.max(velocityRef.current.x, 4); // fixed strong push
-        }
-
-        // Ball physics (Level 1)
-        ballRef.current.position.addScaledVector(velocityRef.current, dt);
-        velocityRef.current.multiplyScalar(Math.max(0, 1 - dt * 2));
-
-        // Respawn if off course
-        if (
-          b.x < -COURSE_SIZE_X / 2 ||
-          b.x > COURSE_SIZE_X / 2 ||
-          b.z < -COURSE_SIZE_Z / 2 ||
-          b.z > COURSE_SIZE_Z / 2
-        ) {
-          ballRef.current.position.copy(startPos);
+        if (sinkingRef.current.active) {
+          // Pull toward hole center and sink
+          const hx = holeRef.current.position.x;
+          const hz = holeRef.current.position.z;
+          b.x += (hx - b.x) * Math.min(1, dt * 6);
+          b.z += (hz - b.z) * Math.min(1, dt * 6);
+          ballRef.current.position.y -= 1.5 * dt;
+          if (ballRef.current.position.y < -1) ballRef.current.visible = false;
+          // stop any residual motion
           velocityRef.current.set(0, 0, 0);
-        }
+        } else {
+          // Water flow stronger than ball velocity
+          if (b.z > waterZ1 && b.z < waterZ2) {
+            velocityRef.current.x = Math.max(velocityRef.current.x, 4); // fixed strong push
+          }
 
-        // Hole detection
-        const dist = b.distanceTo(holeRef.current.position);
-        if (!holeTriggeredRef.current && dist < HOLE_RADIUS) {
-          holeTriggeredRef.current = true;
-          setHoleDone(true);
-          spawnConfetti(ballRef.current.position, 30);
+          // Ball physics (Level 1 style)
+          ballRef.current.position.addScaledVector(velocityRef.current, dt);
+          velocityRef.current.multiplyScalar(Math.max(0, 1 - dt * 2));
+
+          // Respawn if off course
+          if (
+            b.x < -COURSE_SIZE_X / 2 ||
+            b.x > COURSE_SIZE_X / 2 ||
+            b.z < -COURSE_SIZE_Z / 2 ||
+            b.z > COURSE_SIZE_Z / 2
+          ) {
+            ballRef.current.position.copy(startPos);
+            velocityRef.current.set(0, 0, 0);
+          }
+
+          // Hole detection (planar XZ distance with tolerance for ball radius)
+          const dx = b.x - holeRef.current.position.x;
+          const dz = b.z - holeRef.current.position.z;
+          const dist = Math.hypot(dx, dz);
+          const captureRadius = HOLE_RADIUS + BALL_RADIUS * 0.4;
+          if (!holeTriggeredRef.current && dist <= captureRadius) {
+            holeTriggeredRef.current = true;
+            sinkingRef.current.active = true;
+            setHoleDone(true);
+            spawnConfetti(ballRef.current.position, 30);
+            const audio = new Audio("/audio/celebration.mp3");
+            audio.play();
+          }
         }
       }
 
@@ -373,13 +392,22 @@ export default function Canvas3D_Level3() {
   }, []);
 
   return (
-    <div>
-      <div ref={mountRef} />
-      <div className="ui-overlay">
+    <>
+      <div ref={mountRef} style={{ width: "100vw", height: "100vh" }} />
+      <div
+        style={{
+          position: "absolute",
+          top: 10,
+          left: 10,
+          padding: "5px 10px",
+          backgroundColor: "rgba(255,255,255,0.7)",
+          fontFamily: "sans-serif",
+        }}
+      >
         <div>Strokes: {strokes}</div>
         <div>Par: {par}</div>
-        {holeDone && <div>HOLE COMPLETED!</div>}
+        {holeDone && <div style={{ color: "green" }}>Hole Completed! 🎉</div>}
       </div>
-    </div>
+    </>
   );
 }
