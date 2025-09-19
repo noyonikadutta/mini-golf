@@ -173,7 +173,7 @@ export default function Canvas3D_Level3() {
     flagRef.current = flagGroup;
     scene.add(flagGroup);
 
-    // Aiming visuals: straight line + evenly spaced dots
+    // Aiming visuals: dynamic arrow + dots + power ticks
     const trajDots = [];
     const dotMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     for (let i = 0; i < 40; i++) {
@@ -187,6 +187,30 @@ export default function Canvas3D_Level3() {
     const aimLine = new THREE.Line(lineGeom, lineMat);
     aimLine.visible = false;
     scene.add(aimLine);
+
+    const arrowGroup = new THREE.Group();
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0x4caf50 });
+    const shaftGeo = new THREE.CylinderGeometry(0.04, 0.04, 1, 12);
+    const shaft = new THREE.Mesh(shaftGeo, arrowMat);
+    shaft.position.set(0, 0.5, 0);
+    arrowGroup.add(shaft);
+    const headHeight = 0.35;
+    const headGeo = new THREE.ConeGeometry(0.12, headHeight, 16);
+    const head = new THREE.Mesh(headGeo, arrowMat);
+    head.position.set(0, 1 + headHeight / 2, 0);
+    arrowGroup.add(head);
+    arrowGroup.visible = false;
+    scene.add(arrowGroup);
+
+    const tickCount = 12;
+    const powerTicks = [];
+    const tickMat = new THREE.MeshBasicMaterial({ color: 0x4caf50, transparent: true, opacity: 0.15 });
+    for (let i = 0; i < tickCount; i++) {
+      const tick = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.02), tickMat.clone());
+      tick.visible = false;
+      scene.add(tick);
+      powerTicks.push(tick);
+    }
 
     // Aiming radius ring
     const ringGeo = new THREE.RingGeometry(AIM_RADIUS - 0.02, AIM_RADIUS + 0.02, 64);
@@ -241,24 +265,72 @@ export default function Canvas3D_Level3() {
       raycaster.ray.intersectPlane(groundPlane, p);
       return p;
     }
+    function hexLerp(a, b, t) {
+      const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
+      const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
+      const rr = Math.round(ar + (br - ar) * t);
+      const rg = Math.round(ag + (bg - ag) * t);
+      const rb = Math.round(ab + (bb - ab) * t);
+      return (rr << 16) | (rg << 8) | rb;
+    }
+    function powerColor(pNorm) {
+      const green = 0x4caf50, yellow = 0xffcc00, red = 0xff5252;
+      if (pNorm <= 0.5) return hexLerp(green, yellow, pNorm / 0.5);
+      return hexLerp(yellow, red, (pNorm - 0.5) / 0.5);
+    }
     function updateAimingVisuals(previewEnd) {
       if (!ballRef.current) return;
       const ballPos = ballRef.current.position.clone().setY(BALL_RADIUS);
       const endPos = previewEnd.clone().setY(BALL_RADIUS);
-      aimLine.geometry.setFromPoints([ballPos, endPos]);
       const segment = new THREE.Vector3().subVectors(endPos, ballPos);
       const distance = segment.length();
+      const maxPower = 6;
+      const clamped = Math.min(distance, maxPower);
+      const pNorm = clamped / maxPower;
+      const col = powerColor(pNorm);
+      aimLine.visible = false;
       const maxDots = trajDots.length;
       const spacing = 0.25;
       const needed = Math.max(0, Math.min(maxDots, Math.floor(distance / spacing)));
+      dotMat.color.setHex(col);
       for (let i = 0; i < maxDots; i++) {
         if (i < needed) {
           const t = (i + 1) / (needed + 1);
           trajDots[i].position.copy(ballPos).addScaledVector(segment, t);
+          const s = 0.5 + 0.7 * pNorm;
+          trajDots[i].scale.setScalar(s);
           trajDots[i].visible = true;
         } else {
           trajDots[i].visible = false;
         }
+      }
+      const dir = segment.clone();
+      if (dir.lengthSq() < 1e-6) { arrowGroup.visible = false; return; }
+      dir.y = 0;
+      const dirLen = dir.length();
+      const n = dir.clone().normalize();
+      const shaftLen = Math.max(0.2, Math.max(0, dirLen - headHeight * 0.9));
+      arrowGroup.position.copy(new THREE.Vector3(ballPos.x, BALL_RADIUS, ballPos.z));
+      arrowGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(n.x, 0, n.z).normalize());
+      shaft.scale.set(1, shaftLen, 1);
+      shaft.position.set(0, shaftLen / 2, 0);
+      head.position.set(0, shaftLen + headHeight / 2, 0);
+      arrowMat.color.setHex(col);
+      arrowGroup.visible = true;
+      ringMat.color.setHex(col);
+      const tickCount = powerTicks.length;
+      const tickActive = Math.max(0, Math.min(tickCount, Math.round(pNorm * tickCount)));
+      const tickRadius = AIM_RADIUS + 0.18;
+      for (let i = 0; i < tickCount; i++) {
+        const ang = (i / tickCount) * Math.PI * 2;
+        const tx = ballRef.current.position.x + Math.cos(ang) * tickRadius;
+        const tz = ballRef.current.position.z + Math.sin(ang) * tickRadius;
+        const tMesh = powerTicks[i];
+        tMesh.position.set(tx, 0.02, tz);
+        tMesh.lookAt(ballRef.current.position.x, 0.02, ballRef.current.position.z);
+        tMesh.material.color.setHex(col);
+        tMesh.material.opacity = i < tickActive ? 1 : 0.15;
+        tMesh.visible = true;
       }
     }
 
@@ -270,7 +342,9 @@ export default function Canvas3D_Level3() {
         isAimingRef.current = true;
         dragStartRef.current.copy(p);
         previewPointRef.current.copy(ballRef.current.position);
-        aimLine.visible = true;
+        aimLine.visible = false;
+        arrowGroup.visible = true;
+        for (const t of powerTicks) t.visible = true;
         if (controlsRef.current) controlsRef.current.enabled = false;
         renderer.domElement.setPointerCapture(e.pointerId);
       }
@@ -284,14 +358,16 @@ export default function Canvas3D_Level3() {
       if (clampedLen > 0) dir.setLength(clampedLen);
       const targetPreview = new THREE.Vector3().addVectors(ballRef.current.position, dir);
       previewPointRef.current.lerp(targetPreview, 0.35);
-      aimLine.visible = true;
+      arrowGroup.visible = true;
       updateAimingVisuals(previewPointRef.current);
     }
     function onPointerUp(e) {
       if (!isAimingRef.current || !ballRef.current) return;
       isAimingRef.current = false;
-      aimLine.visible = false;
+  aimLine.visible = false;
+  arrowGroup.visible = false;
       trajDots.forEach((d) => (d.visible = false));
+  for (const t of powerTicks) t.visible = false;
       const release = getMousePointOnGround(e);
       const dir = new THREE.Vector3().subVectors(dragStartRef.current, release);
       const power = Math.min(dir.length(), 6);
