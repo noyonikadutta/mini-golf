@@ -7,6 +7,7 @@ const BALL_RADIUS = 0.3;
 const HOLE_RADIUS = 0.5;
 const COURSE_SIZE_X = 14;
 const COURSE_SIZE_Z = 20;
+const AIM_RADIUS = 1.2;
 
 export default function Canvas3D_Level2() {
   const mountRef = useRef();
@@ -18,6 +19,13 @@ export default function Canvas3D_Level2() {
   const sinkingRef = useRef({ active: false });
   const holeTriggeredRef = useRef(false);
   const obstacleRefs = useRef([]);
+  // Aiming
+  const isAimingRef = useRef(false);
+  const dragStartRef = useRef(new THREE.Vector3());
+  const previewPointRef = useRef(new THREE.Vector3());
+  // Controls
+  const controlsRef = useRef(null);
+  const userInteractingRef = useRef(false);
 
   const [strokes, setStrokes] = useState(0);
   const [par] = useState(4);
@@ -31,7 +39,8 @@ export default function Canvas3D_Level2() {
     scene.background = new THREE.Color(0xb3d9ff); // surroundings blueish
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 8, 12);
+  // Eye-level, a bit farther
+  camera.position.set(0, 3, 18);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -42,6 +51,24 @@ export default function Canvas3D_Level2() {
     controls.enablePan = true;
     controls.enableZoom = true;
     controls.enableRotate = true;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.screenSpacePanning = false;
+    controls.minPolarAngle = 0.1;
+    controls.maxPolarAngle = Math.PI / 2 - 0.01;
+    controls.minDistance = 6;
+    controls.maxDistance = 40;
+    controlsRef.current = controls;
+    controls.target.set(0, BALL_RADIUS, 0);
+    controls.update();
+    controls.addEventListener("start", () => (userInteractingRef.current = true));
+    controls.addEventListener("end", () => (userInteractingRef.current = false));
+    controls.addEventListener("change", () => {
+      if (controls.target.y < 0.01) {
+        controls.target.y = 0.01;
+        controls.update();
+      }
+    });
 
     // === Lighting ===
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -137,7 +164,7 @@ export default function Canvas3D_Level2() {
     }
     obstacleRefs.current = obstacles;
 
-    // === Trajectory Dots ===
+    // === Aiming visuals: line + evenly spaced dots ===
     const trajDots = [];
     const dotMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     for (let i = 0; i < 40; i++) {
@@ -146,13 +173,19 @@ export default function Canvas3D_Level2() {
       scene.add(d);
       trajDots.push(d);
     }
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
+    const lineGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const aimLine = new THREE.Line(lineGeom, lineMat);
+    aimLine.visible = false;
+    scene.add(aimLine);
 
-    // === Arrow ===
-    const arrowMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
-    const arrowGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-    const arrow = new THREE.Line(arrowGeom, arrowMat);
-    arrow.visible = false;
-    scene.add(arrow);
+    // Aiming radius ring
+    const ringGeo = new THREE.RingGeometry(AIM_RADIUS - 0.02, AIM_RADIUS + 0.02, 64);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+    const aimRing = new THREE.Mesh(ringGeo, ringMat);
+    aimRing.rotation.x = -Math.PI / 2;
+    aimRing.position.set(0, 0.01, 0);
+    scene.add(aimRing);
 
     // === Confetti ===
     for (let i = 0; i < 50; i++) {
@@ -186,9 +219,7 @@ export default function Canvas3D_Level2() {
       }
     }
 
-    // === Mouse Input & Trajectory ===
-    let isAiming = false;
-    let dragStart = null;
+  // === Mouse Input & Aiming ===
     const raycaster = new THREE.Raycaster();
     const tmpV2 = new THREE.Vector2();
     const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -203,61 +234,73 @@ export default function Canvas3D_Level2() {
       return p;
     }
 
-    function simulateTrajectory(start, vel) {
-      const points = [];
-      const simPos = start.clone();
-      const simVel = vel.clone();
-      const dt = 0.06;
-      for (let i = 0; i < trajDots.length; i++) {
-        if (simVel.lengthSq() < 1e-6) break;
-        simPos.addScaledVector(simVel, dt);
-        points.push(simPos.clone());
-        const s = simVel.length();
-        simVel.setLength(Math.max(0, s - 1.5 * dt));
+    function updateAimingVisuals(previewEnd) {
+      if (!ballRef.current) return;
+      const ballPos = ballRef.current.position.clone().setY(BALL_RADIUS);
+      const endPos = previewEnd.clone().setY(BALL_RADIUS);
+      aimLine.geometry.setFromPoints([ballPos, endPos]);
+      const segment = new THREE.Vector3().subVectors(endPos, ballPos);
+      const distance = segment.length();
+      const maxDots = trajDots.length;
+      const spacing = 0.25;
+      const needed = Math.max(0, Math.min(maxDots, Math.floor(distance / spacing)));
+      for (let i = 0; i < maxDots; i++) {
+        if (i < needed) {
+          const t = (i + 1) / (needed + 1);
+          trajDots[i].position.copy(ballPos).addScaledVector(segment, t);
+          trajDots[i].visible = true;
+        } else {
+          trajDots[i].visible = false;
+        }
       }
-      return points;
     }
 
     function onPointerDown(e) {
-      const p = getMousePointOnGround(e);
       if (!ballRef.current) return;
-      if (p.distanceTo(ballRef.current.position) < 1.2) {
-        isAiming = true;
-        dragStart = p.clone();
-        arrow.visible = true;
+      const p = getMousePointOnGround(e);
+      const distXZ = new THREE.Vector2(p.x, p.z).distanceTo(new THREE.Vector2(ballRef.current.position.x, ballRef.current.position.z));
+      if (distXZ < AIM_RADIUS) {
+        isAimingRef.current = true;
+        dragStartRef.current.copy(p);
+        previewPointRef.current.copy(ballRef.current.position);
+        aimLine.visible = true;
+        if (controlsRef.current) controlsRef.current.enabled = false;
+        renderer.domElement.setPointerCapture(e.pointerId);
       }
     }
     function onPointerMove(e) {
-      if (!isAiming) return;
+      if (!isAimingRef.current || !ballRef.current) return;
       const current = getMousePointOnGround(e);
-      const dir = new THREE.Vector3().subVectors(dragStart, current);
-      const length = Math.min(dir.length(), 6);
-      dir.setLength(length);
-      const arrowEnd = new THREE.Vector3().addVectors(ballRef.current.position, dir);
-      arrow.geometry.setFromPoints([ballRef.current.position.clone().setY(BALL_RADIUS), arrowEnd.clone().setY(BALL_RADIUS)]);
-      const sim = simulateTrajectory(ballRef.current.position.clone(), dir.clone().multiplyScalar(5));
-      trajDots.forEach((d, i) => {
-        if (i < sim.length) { d.position.copy(sim[i]).setY(BALL_RADIUS); d.visible = true; }
-        else d.visible = false;
-      });
+      const dir = new THREE.Vector3().subVectors(dragStartRef.current, current);
+      const maxPower = 6;
+      const clampedLen = Math.min(dir.length(), maxPower);
+      if (clampedLen > 0) dir.setLength(clampedLen);
+      const targetPreview = new THREE.Vector3().addVectors(ballRef.current.position, dir);
+      previewPointRef.current.lerp(targetPreview, 0.35);
+      aimLine.visible = true;
+      updateAimingVisuals(previewPointRef.current);
     }
     function onPointerUp(e) {
-      if (!isAiming) return;
-      isAiming = false;
-      arrow.visible = false;
-      trajDots.forEach(d => (d.visible = false));
+      if (!isAimingRef.current || !ballRef.current) return;
+      isAimingRef.current = false;
+      aimLine.visible = false;
+      trajDots.forEach((d) => (d.visible = false));
       const release = getMousePointOnGround(e);
-      const dir = new THREE.Vector3().subVectors(dragStart, release);
+      const dir = new THREE.Vector3().subVectors(dragStartRef.current, release);
       const power = Math.min(dir.length(), 6);
-      dir.setLength(power * 5);
-      velocityRef.current.add(dir);
-      setStrokes(s => s + 1);
+      if (power > 0) {
+        dir.setLength(power * 5);
+        velocityRef.current.add(dir);
+        setStrokes((s) => s + 1);
+      }
+      if (controlsRef.current) controlsRef.current.enabled = true;
+      try { renderer.domElement.releasePointerCapture(e.pointerId); } catch {}
     }
 
-    renderer.domElement.addEventListener("pointerdown", onPointerDown, { passive: true });
-    renderer.domElement.addEventListener("pointermove", onPointerMove, { passive: true });
-    renderer.domElement.addEventListener("pointerup", onPointerUp, { passive: true });
-    renderer.domElement.addEventListener("pointerleave", onPointerUp, { passive: true });
+  renderer.domElement.addEventListener("pointerdown", onPointerDown, { passive: true });
+  renderer.domElement.addEventListener("pointermove", onPointerMove, { passive: true });
+  renderer.domElement.addEventListener("pointerup", onPointerUp, { passive: true });
+  renderer.domElement.addEventListener("pointerleave", onPointerUp, { passive: true });
 
     // === Animation ===
     let last = performance.now();
@@ -316,17 +359,35 @@ export default function Canvas3D_Level2() {
 
       updateConfetti(dt);
 
-      // camera follows ball smoothly
-      const targetPos = ballRef.current.position.clone().add(new THREE.Vector3(0, 6, 12));
-      camera.position.lerp(targetPos, 0.05);
-      camera.lookAt(ballRef.current.position);
+      // Keep aiming ring centered on ball
+      if (ballRef.current) {
+        aimRing.position.set(ballRef.current.position.x, 0.01, ballRef.current.position.z);
+      }
+
+      // Gentle follow of controls target while ball is moving and user not interacting
+      if (ballRef.current) {
+        const moving = velocityRef.current.lengthSq() > 1e-6;
+        if (moving && !isAimingRef.current && !userInteractingRef.current) {
+          const desired = new THREE.Vector3(ballRef.current.position.x, BALL_RADIUS, ballRef.current.position.z);
+          controls.target.lerp(desired, 0.08);
+          if (controls.target.y < 0.01) controls.target.y = 0.01;
+        }
+      }
+
+      controls.update();
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
-    animate(performance.now());
+  animate(performance.now());
 
-    return () => { mount.removeChild(renderer.domElement); };
+    return () => {
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      renderer.domElement.removeEventListener("pointerleave", onPointerUp);
+      mount.removeChild(renderer.domElement);
+    };
   }, []);
 
   return (
