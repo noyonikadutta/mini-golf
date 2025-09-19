@@ -1,3 +1,4 @@
+// src/scene/Canvas3D_Level3.jsx
 import React, { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -7,26 +8,27 @@ const HOLE_RADIUS = 0.5;
 const COURSE_SIZE_X = 14;
 const COURSE_SIZE_Z = 20;
 
-export default function Canvas3D() {
+export default function Canvas3D_Level3() {
   const mountRef = useRef();
   const ballRef = useRef();
   const holeRef = useRef();
   const flagRef = useRef();
   const confettiPoolRef = useRef([]);
   const velocityRef = useRef(new THREE.Vector3(0, 0, 0));
-  const sinkingRef = useRef({ active: false });
   const holeTriggeredRef = useRef(false);
 
   const [strokes, setStrokes] = useState(0);
   const [par] = useState(3);
   const [holeDone, setHoleDone] = useState(false);
 
+  const startPos = new THREE.Vector3(0, BALL_RADIUS, COURSE_SIZE_Z / 2 - 2);
+
   useEffect(() => {
     const mount = mountRef.current;
 
     // === Scene + Camera + Renderer ===
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xb3d9ff); // surroundings blueish
+    scene.background = new THREE.Color(0xb3d9ff);
 
     const camera = new THREE.PerspectiveCamera(
       60,
@@ -40,20 +42,19 @@ export default function Canvas3D() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     mount.appendChild(renderer.domElement);
 
-    // OrbitControls
+    // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enablePan = true;
     controls.enableZoom = true;
     controls.enableRotate = true;
 
-    // === Lighting ===
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambient);
+    // Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dir = new THREE.DirectionalLight(0xffffff, 0.8);
     dir.position.set(5, 15, 10);
     scene.add(dir);
 
-    // === Golf Course ===
+    // Golf course squares
     const courseGroup = new THREE.Group();
     const lightGreen = 0x8ee58e;
     const darkGreen = 0x76c776;
@@ -75,7 +76,7 @@ export default function Canvas3D() {
     }
     scene.add(courseGroup);
 
-    // === Boundaries ===
+    // Borders
     const borderHeight = 0.5;
     const borderMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
     const borders = [
@@ -96,61 +97,47 @@ export default function Canvas3D() {
       scene.add(mesh);
     });
 
-    // === Ball ===
+    // Water strip (horizontal, middle)
+    const waterWidth = COURSE_SIZE_X;
+    const waterDepth = 3;
+    const waterGeo = new THREE.BoxGeometry(waterWidth, 0.1, waterDepth);
+    const waterMat = new THREE.MeshStandardMaterial({ color: 0x1e90ff });
+    const water = new THREE.Mesh(waterGeo, waterMat);
+    water.position.set(0, 0.05, 0);
+    scene.add(water);
+
+    // Ball
     const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
     const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
     const ball = new THREE.Mesh(ballGeo, ballMat);
-    ball.position.set(0, BALL_RADIUS, COURSE_SIZE_Z / 2 - 2); // spawn at top
+    ball.position.copy(startPos);
     ballRef.current = ball;
     scene.add(ball);
-// === Hole (plain black, bigger) – significantly further along Z-axis ===
-const holeRadius = 0.35;
-const holeHeight = 0.05;
-const holeGeo = new THREE.CylinderGeometry(holeRadius, holeRadius, holeHeight, 32);
-const holeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-const hole = new THREE.Mesh(holeGeo, holeMat);
 
-// Place hole significantly after obstacle
-hole.position.set(0, holeHeight / 2, -COURSE_SIZE_Z / 2 + 2); // far top of course
-holeRef.current = hole;
-scene.add(hole);
+    // Hole
+    const holeGeo = new THREE.CylinderGeometry(HOLE_RADIUS, HOLE_RADIUS, 0.05, 32);
+    const holeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const hole = new THREE.Mesh(holeGeo, holeMat);
+    hole.position.set(0, 0.025, -COURSE_SIZE_Z / 2 + 2);
+    holeRef.current = hole;
+    scene.add(hole);
 
-// === Flag Pole + Flag attached to hole ===
-const flagGroup = new THREE.Group();
+    // Flag
+    const flagGroup = new THREE.Group();
+    const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 6, 16);
+    const pole = new THREE.Mesh(poleGeo, new THREE.MeshStandardMaterial({ color: 0x8b5a2b }));
+    pole.position.set(0, 3, 0);
+    flagGroup.add(pole);
+    const flagGeo = new THREE.PlaneGeometry(1.5, 0.9);
+    const flagMat = new THREE.MeshStandardMaterial({ color: 0xff0000, side: THREE.DoubleSide });
+    const flag = new THREE.Mesh(flagGeo, flagMat);
+    flag.position.set(0.75, 6, 0);
+    flagGroup.add(flag);
+    flagGroup.position.copy(hole.position);
+    flagRef.current = flagGroup;
+    scene.add(flagGroup);
 
-// Pole
-const poleHeight = 6;
-const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, poleHeight, 16);
-const poleMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
-const pole = new THREE.Mesh(poleGeo, poleMat);
-pole.position.set(0, poleHeight / 2, 0); // relative to group
-flagGroup.add(pole);
-
-// Flag (attached to pole)
-const flagGeo = new THREE.PlaneGeometry(1.5, 0.9);
-const flagMat = new THREE.MeshStandardMaterial({ color: 0xff0000, side: THREE.DoubleSide });
-const flag = new THREE.Mesh(flagGeo, flagMat);
-flag.position.set(0.75, poleHeight, 0); // attached at top of pole
-flag.rotation.y = 0; // front faces camera
-flagGroup.add(flag);
-
-// Place flag group at hole position
-flagGroup.position.copy(hole.position);
-flagRef.current = flagGroup;
-scene.add(flagGroup);
-
-
-
-
-
-    // === Obstacle ===
-    const obstacleGeo = new THREE.BoxGeometry(2, 1, 2);
-    const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-    const obstacle = new THREE.Mesh(obstacleGeo, obstacleMat);
-    obstacle.position.set(0, 0.5, 0); // middle
-    scene.add(obstacle);
-
-    // === Trajectory Dots ===
+    // Trajectory dots (Yellow, exactly like Level 1)
     const trajDots = [];
     const dotMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     for (let i = 0; i < 40; i++) {
@@ -160,14 +147,14 @@ scene.add(flagGroup);
       trajDots.push(d);
     }
 
-    // === Arrow ===
+    // Arrow (Level 1 style)
     const arrowMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
     const arrowGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
     const arrow = new THREE.Line(arrowGeom, arrowMat);
     arrow.visible = false;
     scene.add(arrow);
 
-    // === Confetti ===
+    // Confetti (Level 1)
     for (let i = 0; i < 50; i++) {
       const cGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
       const cMat = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
@@ -199,7 +186,7 @@ scene.add(flagGroup);
       }
     }
 
-    // === Mouse Input ===
+    // Mouse aiming (Level 1 exact)
     let isAiming = false;
     let dragStart = null;
     const raycaster = new THREE.Raycaster();
@@ -214,7 +201,6 @@ scene.add(flagGroup);
       raycaster.ray.intersectPlane(groundPlane, p);
       return p;
     }
-
     function simulateTrajectory(start, vel) {
       const points = [];
       const simPos = start.clone();
@@ -233,131 +219,104 @@ scene.add(flagGroup);
     function onPointerDown(e) {
       const p = getMousePointOnGround(e);
       if (!ballRef.current) return;
-      if (p.distanceTo(ballRef.current.position) < 1.2) {
+      if (p.distanceTo(ballRef.current.position) < 2) {
         isAiming = true;
-        dragStart = p.clone();
-        arrow.visible = true;
+        dragStart = p;
       }
     }
     function onPointerMove(e) {
       if (!isAiming) return;
-      const current = getMousePointOnGround(e);
-      const dir = new THREE.Vector3().subVectors(dragStart, current);
-      const length = Math.min(dir.length(), 6);
-      dir.setLength(length);
-      const arrowEnd = new THREE.Vector3().addVectors(ballRef.current.position, dir);
-      arrow.geometry.setFromPoints([ballRef.current.position.clone().setY(BALL_RADIUS), arrowEnd.clone().setY(BALL_RADIUS)]);
-      const sim = simulateTrajectory(ballRef.current.position.clone(), dir.clone().multiplyScalar(5));
-      trajDots.forEach((d, i) => {
-        if (i < sim.length) {
-          d.position.copy(sim[i]).setY(BALL_RADIUS);
-          d.visible = true;
-        } else d.visible = false;
-      });
+      const p = getMousePointOnGround(e);
+      const delta = dragStart.clone().sub(p);
+      velocityRef.current.copy(delta.multiplyScalar(2));
+      const traj = simulateTrajectory(ballRef.current.position, velocityRef.current);
+      for (let i = 0; i < trajDots.length; i++) {
+        if (traj[i]) {
+          trajDots[i].position.copy(traj[i]);
+          trajDots[i].visible = true;
+        } else trajDots[i].visible = false;
+      }
     }
-    function onPointerUp(e) {
+    function onPointerUp() {
       if (!isAiming) return;
       isAiming = false;
-      arrow.visible = false;
-      trajDots.forEach(d => (d.visible = false));
-      const release = getMousePointOnGround(e);
-      const dir = new THREE.Vector3().subVectors(dragStart, release);
-      const power = Math.min(dir.length(), 6);
-      dir.setLength(power * 5);
-      velocityRef.current.add(dir);
-      setStrokes(s => s + 1);
+      dragStart = null;
     }
+    renderer.domElement.addEventListener("pointerdown", onPointerDown);
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointerup", onPointerUp);
 
-    renderer.domElement.addEventListener("pointerdown", onPointerDown, { passive: true });
-    renderer.domElement.addEventListener("pointermove", onPointerMove, { passive: true });
-    renderer.domElement.addEventListener("pointerup", onPointerUp, { passive: true });
-    renderer.domElement.addEventListener("pointerleave", onPointerUp, { passive: true });
-
-    // === Animation ===
+    // === Animate ===
     let last = performance.now();
-    function animate(now) {
+    function animate() {
+      const now = performance.now();
       const dt = (now - last) / 1000;
       last = now;
 
-      // velocity -> position
-      if (!sinkingRef.current.active) {
-        const vel = velocityRef.current;
-        if (vel.lengthSq() > 1e-6) {
-          const speed = vel.length();
-          const decel = 1.5 * dt;
-          vel.setLength(Math.max(0, speed - decel));
-          ballRef.current.position.addScaledVector(vel, dt);
+      if (ballRef.current) {
+        const b = ballRef.current.position;
+        const waterZ1 = -waterDepth / 2;
+        const waterZ2 = waterDepth / 2;
 
-          // bounce off borders
-          const limitX = COURSE_SIZE_X / 2;
-          const limitZ = COURSE_SIZE_Z / 2;
-          if (ballRef.current.position.x < -limitX) { ballRef.current.position.x = -limitX; vel.x *= -0.7; }
-          if (ballRef.current.position.x > limitX) { ballRef.current.position.x = limitX; vel.x *= -0.7; }
-          if (ballRef.current.position.z < -limitZ) { ballRef.current.position.z = -limitZ; vel.z *= -0.7; }
-          if (ballRef.current.position.z > limitZ) { ballRef.current.position.z = limitZ; vel.z *= -0.7; }
-
-          // simple obstacle collision
-          const obsBox = new THREE.Box3().setFromObject(obstacle);
-          const ballBox = new THREE.Sphere(ballRef.current.position, BALL_RADIUS);
-          if (obsBox.intersectsSphere(ballBox)) {
-            vel.negate().multiplyScalar(0.6);
-            ballRef.current.position.addScaledVector(vel, dt);
-          }
-
-          // ball-in-hole detection
-          const distToHole = ballRef.current.position.distanceTo(holeRef.current.position);
-          if (!holeTriggeredRef.current && distToHole < HOLE_RADIUS) {
-            holeTriggeredRef.current = true;
-            sinkingRef.current.active = true;
-            // play confetti & sound
-            spawnConfetti(ballRef.current.position);
-            const audio = new Audio("/audio/celebration.mp3");
-            audio.play();
-            setHoleDone(true);
-          }
+        // Water flow stronger than ball velocity
+        if (b.z > waterZ1 && b.z < waterZ2) {
+          velocityRef.current.x = Math.max(velocityRef.current.x, 4); // fixed strong push
         }
-      } else {
-        // sinking animation
-        ballRef.current.position.y -= 1.5 * dt;
-        if (ballRef.current.position.y < -1) ballRef.current.visible = false;
+
+        // Ball physics (Level 1)
+        ballRef.current.position.addScaledVector(velocityRef.current, dt);
+        velocityRef.current.multiplyScalar(Math.max(0, 1 - dt * 2));
+
+        // Respawn if off course
+        if (
+          b.x < -COURSE_SIZE_X / 2 ||
+          b.x > COURSE_SIZE_X / 2 ||
+          b.z < -COURSE_SIZE_Z / 2 ||
+          b.z > COURSE_SIZE_Z / 2
+        ) {
+          ballRef.current.position.copy(startPos);
+          velocityRef.current.set(0, 0, 0);
+        }
+
+        // Hole detection
+        const dist = b.distanceTo(holeRef.current.position);
+        if (!holeTriggeredRef.current && dist < HOLE_RADIUS) {
+          holeTriggeredRef.current = true;
+          setHoleDone(true);
+          spawnConfetti(ballRef.current.position, 30);
+        }
       }
 
-      // confetti update
       updateConfetti(dt);
 
-      // camera follows ball smoothly
-      const targetPos = ballRef.current.position.clone().add(new THREE.Vector3(0, 6, 12));
-      camera.position.lerp(targetPos, 0.05);
+      // Camera follow (Level 1)
+      camera.position.lerp(
+        new THREE.Vector3(ballRef.current.position.x, 8, ballRef.current.position.z + 12),
+        0.05
+      );
       camera.lookAt(ballRef.current.position);
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
-    animate(performance.now());
+    animate();
 
-    // === Cleanup ===
     return () => {
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerup", onPointerUp);
       mount.removeChild(renderer.domElement);
     };
   }, []);
 
   return (
-    <>
-      <div ref={mountRef} style={{ width: "100vw", height: "100vh" }} />
-      <div
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          padding: "5px 10px",
-          backgroundColor: "rgba(255,255,255,0.7)",
-          fontFamily: "sans-serif",
-        }}
-      >
+    <div>
+      <div ref={mountRef} />
+      <div className="ui-overlay">
         <div>Strokes: {strokes}</div>
         <div>Par: {par}</div>
-        {holeDone && <div style={{ color: "green" }}>Hole Completed! 🎉</div>}
+        {holeDone && <div>HOLE COMPLETED!</div>}
       </div>
-    </>
+    </div>
   );
 }

@@ -1,4 +1,3 @@
-// src/auth/Login.jsx
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -12,8 +11,8 @@ export default function Login({ setLoggedIn }) {
     const user = JSON.parse(localStorage.getItem("user"));
     if (user && user.email === email && user.password === password) {
       localStorage.setItem("loggedIn", "true");
-      setLoggedIn(true);
-      navigate("/menu");
+      if (setLoggedIn) setLoggedIn(true); // update App state if provided
+      navigate("/menu"); // go to main menu
     } else {
       alert("Invalid credentials!");
     }

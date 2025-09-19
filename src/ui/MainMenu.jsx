@@ -1,12 +1,10 @@
-// src/ui/MainMenu.jsx
 import { useNavigate } from "react-router-dom";
 import "./MainMenu.css";
 
 export default function MainMenu() {
   const navigate = useNavigate();
 
-  // now 5 levels
-  const levels = [1, 2, 3, 4, 5];
+  const levels = [1, 2, 3]; // Added Level 3
 
   return (
     <div className="menu-container">

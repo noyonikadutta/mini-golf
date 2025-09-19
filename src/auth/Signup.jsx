@@ -1,4 +1,3 @@
-// src/auth/Signup.jsx
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -11,7 +10,7 @@ export default function Signup() {
     e.preventDefault();
     localStorage.setItem("user", JSON.stringify({ email, password }));
     alert("Signup successful! Please login.");
-    navigate("/login");
+    navigate("/login"); // go to login after signup
   }
 
   return (
