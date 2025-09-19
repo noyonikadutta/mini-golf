@@ -142,6 +142,53 @@ export default function Canvas3D_Level3() {
     water.position.set(0, 0.05, 0);
     scene.add(water);
 
+    // Flow direction indicator (animated arrows moving +X across water)
+    const flowArrowY = 0.11; // slightly above water surface
+    const flowRows = 5;
+    const flowCols = 18;
+    const flowSpeed = 2.2; // units/sec toward +X
+    const flowInstCount = flowRows * flowCols;
+    const flowPositions = new Array(flowInstCount);
+    const dummy = new THREE.Object3D();
+
+    // Flat triangle geometry lying on XZ plane, pointing +X
+    const flowGeo = new THREE.BufferGeometry();
+    const flowVerts = new Float32Array([
+      -0.14, 0, -0.09,
+      -0.14, 0,  0.09,
+       0.22, 0,  0.0,
+    ]);
+    flowGeo.setAttribute("position", new THREE.BufferAttribute(flowVerts, 3));
+    flowGeo.computeVertexNormals();
+    const flowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, side: THREE.DoubleSide });
+    const flowMesh = new THREE.InstancedMesh(flowGeo, flowMat, flowInstCount);
+    flowMesh.renderOrder = 2; // try to render above water
+
+    const xMin = -COURSE_SIZE_X / 2;
+    const xMax = COURSE_SIZE_X / 2;
+    const zMin = -waterDepth / 2;
+    const zMax = waterDepth / 2;
+    const spacingX = COURSE_SIZE_X / flowCols;
+    const spacingZ = (zMax - zMin) / (flowRows + 1);
+
+    let idx = 0;
+    for (let r = 0; r < flowRows; r++) {
+      const z = zMin + spacingZ * (r + 1);
+      // Stagger each row for a nicer pattern
+      const xOffset = (r % 2 === 0 ? 0 : spacingX * 0.5);
+      for (let c = 0; c < flowCols; c++) {
+        const x = xMin + xOffset + c * spacingX;
+        flowPositions[idx] = { x, z, s: 0.8 + Math.random() * 0.4 };
+        dummy.position.set(x, flowArrowY, z);
+        dummy.scale.setScalar(flowPositions[idx].s);
+        dummy.updateMatrix();
+        flowMesh.setMatrixAt(idx, dummy.matrix);
+        idx++;
+      }
+    }
+    flowMesh.instanceMatrix.needsUpdate = true;
+    scene.add(flowMesh);
+
     // Ball
     const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
     const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
@@ -441,6 +488,20 @@ export default function Canvas3D_Level3() {
             audio.play();
           }
         }
+      }
+
+      // Update water flow indicators (drift +X and wrap)
+      if (flowMesh) {
+        for (let i = 0; i < flowInstCount; i++) {
+          const p = flowPositions[i];
+          p.x += flowSpeed * dt;
+          if (p.x > xMax + 0.3) p.x = xMin - 0.3; // wrap around
+          dummy.position.set(p.x, flowArrowY, p.z);
+          dummy.scale.setScalar(p.s);
+          dummy.updateMatrix();
+          flowMesh.setMatrixAt(i, dummy.matrix);
+        }
+        flowMesh.instanceMatrix.needsUpdate = true;
       }
 
       updateConfetti(dt);
