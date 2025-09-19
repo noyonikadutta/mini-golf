@@ -7,17 +7,22 @@ export default function MainMenu() {
   const levels = [1, 2, 3]; // Added Level 3
 
   return (
-    <div className="menu-container">
-      <div className="menu-card">
-        <h1 className="menu-title">🏌️ MiniGolf Studio</h1>
-        <p className="menu-sub">Choose your level</p>
+    <div className="auth-container">
+      <div className="auth-card" role="region" aria-label="Main menu card">
+        <div className="auth-top">
+          <div className="logo-ball" aria-hidden="true" />
+          <div>
+            <div className="auth-title">MiniGolf Studio</div>
+            <div className="auth-sub">Choose your level to start</div>
+          </div>
+        </div>
 
         <div className="menu-grid">
           {levels.map((level) => (
             <button
               key={level}
               onClick={() => navigate(`/game/${level}`)}
-              className="menu-btn"
+              className="auth-btn btn-green"
             >
               Level {level}
             </button>
@@ -29,7 +34,7 @@ export default function MainMenu() {
             localStorage.removeItem("loggedIn");
             navigate("/login");
           }}
-          className="menu-logout"
+          className="auth-btn btn-red"
         >
           Logout
         </button>
