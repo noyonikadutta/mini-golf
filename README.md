@@ -52,7 +52,9 @@ Each level presents unique obstacles that test your **strategy and precision**.
 - **React** – Frontend library for UI components  
 - **Vite** – Fast development server and optimized build tool  
 - **Three.js** – 3D rendering engine for immersive gameplay  
-- **ESLint** – Code quality and linting  
+- **ESLint** – Code quality and linting
+
+[![My Skills](https://skillicons.dev/icons?i=react,vite,threejs,)](https://skillicons.dev) 
 
 ---
 
