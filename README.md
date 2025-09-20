@@ -1,12 +1,125 @@
-# React + Vite
+# 🏌️‍♀️ Mini Golf Game
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![React](https://img.shields.io/badge/React-17.0.2-blue?logo=react)
+![Vite](https://img.shields.io/badge/Vite-4.4.0-brightgreen?logo=vite)
+![GitHub stars](https://img.shields.io/github/stars/noyonikadutta/mini-golf?style=social)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Currently, two official plugins are available:
+Welcome to **Mini Golf**, a web-based 3D mini-golf game built with **React**, **Vite**, and **Three.js**.  
+This project demonstrates interactive physics, 3D rendering, and responsive gameplay.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🎮 Game Overview
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Navigate through multiple challenging courses, aim precisely, and sink the ball in as few strokes as possible!  
+Each level presents unique obstacles that test your **strategy and precision**.
+
+---
+
+## 🏟️ Levels
+
+- **Level 1 – Beginner Course**  
+  - Simple golf course with a stationary wooden obstacle  
+  - Perfect for learning aiming and controlling ball speed  
+  - Smooth trajectory line visualization  
+
+- **Level 2 – Intermediate Challenge**  
+  - Golf course with four moving obstacles 
+  - Requires timing and careful aiming to avoid collisions  
+  - Trajectory visualization and collision detection active  
+
+- **Level 3 – Expert Mode**  
+  - Golf course with a stream flowing down the middle 
+  - River pulls the ball downstream, requiring skillful aiming  
+  - Challenges momentum and speed  
+
+---
+
+## ✨ Features
+
+- **3D Gameplay** – Realistic 3D environment and ball physics  
+- **Trajectory Visualization** – Predict your shot with a dynamic path line  
+- **Confetti Effects** – Celebration animation when the ball enters the hole  
+- **Dynamic Camera Control** – Smooth camera transitions and adjustable angles  
+- **Responsive Design** – Play seamlessly on desktop and mobile  
+- **Easy Level Expansion** – Modular level design allows easy addition of new courses  
+
+---
+
+## 🛠️ Technologies Used
+
+- **React** – Frontend library for UI components  
+- **Vite** – Fast development server and optimized build tool  
+- **Three.js** – 3D rendering engine for immersive gameplay  
+- **ESLint** – Code quality and linting  
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/noyonikadutta/mini-golf.git
+```
+
+### 2. Navigate to the project directory
+```bash
+cd mini-golf
+```
+
+### 3. Install dependencies
+```bash
+npm install
+```
+
+### 4. Start the development server
+```bash
+npm run dev
+```
+
+### 5. Open your browser
+Go to: [http://localhost:5173](http://localhost:5173) to play the game
+
+
+
+## 🌐 Live Demo
+
+- Check out the live demo here: [Mini Golf Game Demo](https://noyonikadutta.github.io/mini-golf)  
+> *(Replace with your actual GitHub Pages or deployed link)*
+
+---
+
+## 📸 Screenshots
+
+- **Level 1 – Beginner Course**  
+<img src="screenshots/minigolf-level1.jpg" width="400">
+
+- **Level 2 – Intermediate Challenge**  
+<img src="screenshots/minigolf-level2.jpg" width="400">
+
+- **Level 3 – Expert Mode**  
+<img src="screenshots/minigolf-level3.jpg" width="400">
+
+
+
+---
+
+## 🤝 Contributors
+
+- **[Noyonika Dutta](https://www.github.com/noyonikadutta)**
+- **[Ananth G Karanth](https://github.com/SoiledSalmon)**
+- **[Mohit K](https://github.com/Mohit-Karkera)**
+- **[Nischal](https://github.com/nischal-72)**
+
+
+  
+---
+
+## 📄 License
+
+- This project is licensed under the **MIT License**.  
+- See [LICENSE](LICENSE) for details.
+
+---
+
