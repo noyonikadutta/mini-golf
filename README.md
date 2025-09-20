@@ -88,7 +88,6 @@ Go to: [http://localhost:5173](http://localhost:5173) to play the game
 ## 🌐 Live Demo
 
 - Check out the live demo here: [Mini Golf Game Demo](https://noyonikadutta.github.io/mini-golf)  
-> *(Replace with your actual GitHub Pages or deployed link)*
 
 ---
 
