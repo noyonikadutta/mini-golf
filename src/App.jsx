@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useState } from "react";
 import Signup from "./auth/Signup";
 import Login from "./auth/Login";
 import MainMenu from "./ui/MainMenu";
@@ -7,18 +8,23 @@ import Canvas3D_Level2 from "./scene/Canvas3D_Level2";
 import Canvas3D_Level3 from "./scene/Canvas3D_Level3";
 
 export default function App() {
-  const loggedIn = localStorage.getItem("loggedIn") === "true";
+  const [loggedIn, setLoggedIn] = useState(
+    localStorage.getItem("loggedIn") === "true"
+  );
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/signup" />} />
+      <Route
+        path="/"
+        element={<Navigate to={loggedIn ? "/menu" : "/signup"} />}
+      />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/login" element={<Login setLoggedIn={() => {}} />} />
+      <Route path="/login" element={<Login setLoggedIn={setLoggedIn} />} />
 
       {/* Protected routes */}
       <Route
         path="/menu"
-        element={loggedIn ? <MainMenu /> : <Navigate to="/signup" />}
+        element={loggedIn ? <MainMenu setLoggedIn={setLoggedIn} /> : <Navigate to="/signup" />}
       />
       <Route
         path="/game/1"

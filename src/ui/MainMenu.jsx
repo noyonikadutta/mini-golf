@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import "./MainMenu.css";
 
-export default function MainMenu() {
+export default function MainMenu({ setLoggedIn }) {
   const navigate = useNavigate();
 
   const levels = [1, 2, 3];
@@ -32,6 +32,7 @@ export default function MainMenu() {
         <button
           onClick={() => {
             localStorage.removeItem("loggedIn");
+            if (setLoggedIn) setLoggedIn(false);
             navigate("/login");
           }}
           className="auth-btn btn-red logout-btn"
