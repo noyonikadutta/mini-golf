@@ -1,6 +1,5 @@
-<<<<<<< HEAD
-=======
-.menu-container {
+/* Container and card */
+.auth-container {
   height: 100vh;
   width: 100vw;
   background: linear-gradient(135deg, #a8e063, #56ab2f);
@@ -10,7 +9,7 @@
   font-family: "Poppins", sans-serif;
 }
 
-.menu-card {
+.auth-card {
   background: white;
   border-radius: 20px;
   padding: 40px 60px;
@@ -19,39 +18,58 @@
   animation: fadeIn 0.8s ease;
 }
 
-.menu-title {
-  font-size: 3rem;
-  font-weight: 800;
-  color: #2e7d32;
-  margin-bottom: 10px;
+/* Top logo/title section */
+.auth-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 30px;
 }
 
-.menu-sub {
+.logo-ball {
+  width: 50px;
+  height: 50px;
+  background: #4caf50;
+  border-radius: 50%;
+}
+
+.auth-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #2e7d32;
+}
+
+.auth-sub {
   font-size: 1.2rem;
-  margin-bottom: 30px;
   color: #444;
 }
 
->>>>>>> 801d986 (Linked login page to menu)
+/* Level buttons in one row */
+.level-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px; /* space between level buttons */
+  margin-bottom: 20px;
+}
+
+/* Logout button below */
+.logout-btn {
+  display: block;
+  margin: 0 auto; /* center it */
+}
+
+/* Level buttons grid */
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 16px;
   margin-bottom: 30px;
-}
-
-<<<<<<< HEAD
-/* Ensure grid spans full card width and looks neat */
-.menu-grid {
   width: 100%;
 }
 
-/* Make level buttons a bit more rectangular compared to default auth-btn */
-.menu-grid .auth-btn {
-  border-radius: 6px;
-  padding: 10px 16px;
-=======
-.menu-btn {
+/* Level buttons styling (green) */
+.auth-btn.btn-green {
   padding: 14px 20px;
   background: linear-gradient(180deg, #4caf50, #2e7d32);
   color: white;
@@ -64,12 +82,13 @@
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.menu-btn:hover {
+.auth-btn.btn-green:hover {
   transform: translateY(-3px) scale(1.05);
   background: linear-gradient(180deg, #43a047, #1b5e20);
 }
 
-.menu-logout {
+/* Logout button styling (red) */
+.auth-btn.btn-red {
   margin-top: 10px;
   padding: 12px 18px;
   background: linear-gradient(180deg, #e53935, #b71c1c);
@@ -83,7 +102,7 @@
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.menu-logout:hover {
+.auth-btn.btn-red:hover {
   transform: translateY(-3px) scale(1.05);
   background: linear-gradient(180deg, #d32f2f, #7f0000);
 }
@@ -98,6 +117,4 @@
     opacity: 1;
     transform: translateY(0);
   }
->>>>>>> 801d986 (Linked login page to menu)
 }
-
